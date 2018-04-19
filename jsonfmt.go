@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 func main() {
@@ -26,7 +27,7 @@ func main() {
 }
 
 func run(src string, rewrite bool) error {
-	var rd io.ReadCloser = ioutil.NopCloser(os.Stdin)
+	var rd io.Reader = os.Stdin
 	if src != "" {
 		f, err := os.Open(src)
 		if err != nil {
@@ -35,27 +36,45 @@ func run(src string, rewrite bool) error {
 		defer f.Close()
 		rd = f
 	}
-	var data json.RawMessage
-	if err := json.NewDecoder(rd).Decode(&data); err != nil {
-		return err
+	var enc *json.Encoder
+	var wr io.WriteCloser
+	var err error
+	switch {
+	case src == "" || !rewrite:
+		wr = os.Stdout
+	default:
+		var tf *os.File
+		if tf, err = ioutil.TempFile(filepath.Dir(src), ".jsonfmt-"); err != nil {
+			return err
+		}
+		defer func() {
+			switch err {
+			case nil:
+				os.Rename(tf.Name(), src)
+			default:
+				os.Remove(tf.Name())
+			}
+		}()
+		wr = tf
 	}
-	rd.Close()
-	if src == "" || !rewrite {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "\t")
-		return enc.Encode(data)
-	}
-	of, err := os.Create(src)
-	if err != nil {
-		return err
-	}
-	defer of.Close()
-	enc := json.NewEncoder(of)
+	enc = json.NewEncoder(wr)
 	enc.SetIndent("", "\t")
-	if err := enc.Encode(data); err != nil {
-		return err
+	dec := json.NewDecoder(rd)
+	var data json.RawMessage
+	for {
+		switch err = dec.Decode(&data); err {
+		case io.EOF:
+			return nil
+		case nil:
+		default:
+			return err
+		}
+		if err = enc.Encode(data); err != nil {
+			return err
+		}
 	}
-	return of.Close()
+	err = wr.Close() // explicit assignment so it's visible in defered closure
+	return err
 }
 
 func init() {
