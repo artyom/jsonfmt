@@ -1,0 +1,2 @@
+jsonfmt reads json content given on stdin or file, formats it and writes
+result to stdout.
