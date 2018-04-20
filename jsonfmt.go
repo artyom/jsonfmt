@@ -14,7 +14,7 @@ import (
 
 func main() {
 	var rewrite bool
-	flag.BoolVar(&rewrite, "w", false, "write result to (source) file instead of stdout")
+	flag.BoolVar(&rewrite, "w", false, "overwrite source file instead of writing to stdout")
 	flag.Parse()
 	src := ""
 	if args := flag.Args(); len(args) > 0 {
