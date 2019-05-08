@@ -50,6 +50,11 @@ func run(src string, rewrite bool) error {
 		defer func() {
 			switch err {
 			case nil:
+				if f, ok := rd.(*os.File); ok {
+					if fi, err := f.Stat(); err == nil {
+						os.Chmod(tf.Name(), fi.Mode())
+					}
+				}
 				os.Rename(tf.Name(), src)
 			default:
 				os.Remove(tf.Name())
