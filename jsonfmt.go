@@ -61,10 +61,11 @@ func run(src string, rewrite bool) error {
 	enc.SetIndent("", "\t")
 	dec := json.NewDecoder(rd)
 	var data json.RawMessage
+decodeLoop:
 	for {
 		switch err = dec.Decode(&data); err {
 		case io.EOF:
-			return nil
+			break decodeLoop
 		case nil:
 		default:
 			return err
